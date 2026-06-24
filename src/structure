@@ -1,0 +1,18 @@
+shell-agent/
+├── src/                    # 应用源码包
+│   ├── __init__.py
+│   ├── main.py             # REPL 主入口和 CLI 参数解析
+│   ├── query/              # API 调用 + tool use 循环 + /compact
+│   ├── commands/           # 斜杠命令（/help /status /cost /model /mode /save ...）
+│   ├── permissions/        # 权限模式（read-only / workspace-write / full-access）
+│   ├── sessions/           # 会话保存/恢复
+│   ├── context/            # 自动读取 AGENT.md 注入 system prompt
+│   ├── memory/             # 记忆系统
+│   ├── skills/             # Skill 加载、保存和内置 skill 初始化
+│   ├── coordinator/        # 多 Agent 编排
+│   ├── tools/              # 工具实现
+│   └── mcp/                # MCP 客户端与配置
+├── tests/                  # pytest 单元测试
+├── requirements.txt
+├── AGENT.md
+└── README.md

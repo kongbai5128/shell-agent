@@ -1,0 +1,46 @@
+# Reference and scratch workspaces
+ref/
+work_space/
+errors/
+
+# Editor settings
+.vscode/
+.idea/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Build and packaging output
+build/
+dist/
+*.egg-info/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# shell-agent runtime state
+.shell-agent/
+.shell-agents/
+.shell-agent-todos.json
+
+# Legacy py-agent runtime state
+.py-agent/
+.py-agents/
+.py-agent-todos.json

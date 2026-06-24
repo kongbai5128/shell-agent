@@ -1,0 +1,1 @@
+"""shell-agent application package."""
