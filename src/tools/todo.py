@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal
 
 from . import ToolSpec, register
+from ..paths import TODO_FILE
 
 # todo 存储路径
-TODO_FILE = Path(".shell-agent-todos.json")
 
 TodoStatus = Literal["pending", "in_progress", "completed"]
 
@@ -63,6 +62,7 @@ def _load_todos() -> list[TodoItem]:
 
 
 def _save_todos(todos: list[TodoItem]) -> None:
+    TODO_FILE.parent.mkdir(parents=True, exist_ok=True)
     TODO_FILE.write_text(
         json.dumps([t.to_dict() for t in todos], indent=2, ensure_ascii=False),
         encoding="utf-8",

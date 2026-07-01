@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
 from typing import Any, Callable
 
 
@@ -42,18 +43,21 @@ def to_api_definitions() -> list[dict]:
     ]
 
 
-def execute(name: str, input_data: dict) -> str:
+def execute(name: str, input_data: dict, engine: Any | None = None) -> str:
     spec = get_tool(name)
     if spec is None:
         return f"错误：未知工具 '{name}'"
     try:
+        params = inspect.signature(spec.handler).parameters
+        if len(params) >= 2:
+            return spec.handler(input_data, engine)
         return spec.handler(input_data)
     except Exception as e:
         return f"工具 '{name}' 执行出错: {e}"
 
 
 # 导入所有工具，触发注册
-from . import file_ops, shell, search, web, todo, skill_tool, mcp_tool, memory_tool  # noqa: E402, F401
+from . import file_ops, shell, search, web, todo, skill_tool, mcp_tool, memory_tool, research_tool  # noqa: E402, F401
 
 # 浏览器工具（可选，需要 playwright）
 try:

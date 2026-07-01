@@ -33,11 +33,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, TYPE_CHECKING
 
+from ..paths import AGENTS_DIR
+
 if TYPE_CHECKING:
     from ..query import QueryEngine
 
 # ── 存储路径，对标 claw-code agent_store_dir() ─────────────────
-AGENT_STORE_DIR = Path(".shell-agents")
+AGENT_STORE_DIR = AGENTS_DIR
 
 # ── 通知队列（对标 Claude Code task-notification 推送机制）──────
 # Worker 完成后把 <task-notification> XML 推入此队列

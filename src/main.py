@@ -1,10 +1,29 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import sys
 from pathlib import Path
 
-from .memory import memory_age_text
+# 兼容两种启动方式：
+# 1. 推荐：在项目根目录执行 `python -m src.main`
+# 2. 兼容：进入 src/ 后执行 `python main.py`
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from src.memory import memory_age_text
+    from src.commands import handle_command
+    from src.context import build_workspace_context
+    from src.permissions import PermissionMode, ToolPermissionContext
+    from src.paths import DREAM_LOG, ensure_using_dirs
+    from src.sessions import load_session
+else:
+    from .memory import memory_age_text
+    from .commands import handle_command
+    from .context import build_workspace_context
+    from .permissions import PermissionMode, ToolPermissionContext
+    from .paths import DREAM_LOG, ensure_using_dirs
+    from .sessions import load_session
+
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -14,12 +33,13 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 
-from .commands import handle_command
-from .context import build_workspace_context
-from .permissions import PermissionMode, ToolPermissionContext
-from .sessions import load_session
-
 console = Console()
+
+
+def _import_module(name: str):
+    """按当前启动方式导入 src 包内模块。"""
+    package = __package__ or "src"
+    return importlib.import_module(f"{package}.{name}")
 
 # 模式对应颜色与图标
 _MODE_STYLE = {
@@ -51,6 +71,14 @@ _TOOL_ICONS = {
     "shutdown_agent":   "🛑",
     "send_message":     "📨",
     "list_agents":      "📋",
+    "research_resolve_paper": "📚",
+    "research_fetch_paper": "📥",
+    "research_create_reading_note": "📝",
+    "research_find_code": "🔗",
+    "research_reproduction_plan": "🧪",
+    "research_prepare_from_paper": "🧬",
+    "research_prepare_reproduction": "🧬",
+    "research_search_library": "📖",
 }
 
 
@@ -90,6 +118,7 @@ SYSTEM_PROMPT_TEMPLATE = """
 - browser_navigate / browser_click / browser_fill / browser_get_content：浏览器自动化（支持 JS 渲染、登录态、人机验证由用户处理）
 - todo_write / todo_read：任务管理（3+ 步骤的复杂任务必须使用；每项需提供 content 祈使形式 + activeForm 现在进行时；同时只能有一个 in_progress）
 - skill_use / skill_save：加载和保存可复用的专家 prompt（skill）
+- research_resolve_paper / research_fetch_paper / research_create_reading_note / research_find_code / research_reproduction_plan / research_prepare_from_paper / research_prepare_reproduction / research_search_library：文献解析、论文获取/正文提取、阅读笔记、代码候选、复现计划和研究库检索。用户说“复现某篇论文/某算法代码”时，优先调用 research_prepare_reproduction；它会先从 using/article 候选中选择最相关论文，没有则联网搜索，随后切片、查找 GitHub、可选 clone。论文全文和长摘要应进入 using/research，不要直接写入普通长期记忆。
 - spawn_agent / get_agent_result / shutdown_agent / send_message / list_agents：多 Agent 并行编排。当用户明确要求使用 agent/多代理，或任务可拆解为多个高度解耦的子任务时，**必须**使用 spawn_agent 并行派发，不要自己串行执行。Worker 完成后结果会以 <task-notification> XML 自动送达，无需主动调 get_agent_result 等待。
 
 # 任务执行原则
@@ -196,7 +225,7 @@ def confirm_callback(tool_name: str, tool_input: dict) -> bool:
 def _build_skill_block() -> str:
     """列出所有可用 skill，注入 system prompt（对标 claw-code skill_listing attachment）"""
     try:
-        from .skills import list_skills
+        list_skills = _import_module("skills").list_skills
         skills = list_skills()
         if not skills:
             return ""
@@ -213,7 +242,7 @@ def _build_skill_block() -> str:
 def _build_memory_block(query: str = "", engine=None) -> str:
     """从记忆系统检索相关记忆，注入 system prompt"""
     try:
-        from .memory import MemoryStore
+        MemoryStore = _import_module("memory").MemoryStore
         store = MemoryStore()
         if query:
             # 优先用 LLM 选择器（对标 Claude Code findRelevantMemories.ts）
@@ -246,7 +275,7 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
     _print_banner(engine, coordinator_mode)
 
     # 检查 Dream 日志
-    dream_log = Path.cwd() / ".shell-agent" / "memories" / "dream.log"
+    dream_log = DREAM_LOG
     if dream_log.exists():
         log_lines = dream_log.read_text().strip().splitlines()
         if log_lines:
@@ -276,7 +305,7 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
             if "/memory dream" in user_input.lower():
                 console.print("[dim]  正在运行 Dream 记忆整合...[/dim]")
                 try:
-                    from .memory import run_dream
+                    run_dream = _import_module("memory").run_dream
                     result = run_dream(engine, verbose=True)
                     cmd_result = type(cmd_result)(result)
                 except Exception as e:
@@ -367,6 +396,8 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
                     hint = f" [dim white]{tinput.get('text', '') or tinput.get('selector', '')}[/dim white]"
                 elif tname == "spawn_agent":
                     hint = f" [dim white]{tinput.get('description', '')[:60]}[/dim white]"
+                elif tname.startswith("research_"):
+                    hint = f" [dim white]{tinput.get('query', '') or tinput.get('paper_id', '') or tinput.get('repo', '')}[/dim white]"
                 elif tname in ("get_agent_result", "send_message", "shutdown_agent"):
                     hint = f" [dim white]{tinput.get('agent_id', '')[:20]}[/dim white]"
                 console.print(f"  [cyan]  {icon} {tname}[/cyan]{hint}")
@@ -388,7 +419,7 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
 
             # 注入浏览器暂停回调（playwright 未安装时静默跳过）
             try:
-                from .tools import browser as _browser_mod
+                _browser_mod = _import_module("tools.browser")
                 _browser_mod.set_pause_callback(_browser_pause_cb)
             except Exception:
                 pass
@@ -412,13 +443,16 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
             # 直到没有新通知、也没有待运行的 Worker 为止
             # 注意：不再限定 coordinator_mode，普通模式下用户也可调用 spawn_agent
             try:
-                from .coordinator import _active_workers as _aw_check
+                _aw_check = _import_module("coordinator")._active_workers
                 _has_any_workers = bool(_aw_check)
             except Exception:
                 _has_any_workers = False
             if coordinator_mode or _has_any_workers:
                 try:
-                    from .coordinator import drain_notifications, _active_workers, _read_manifest
+                    _coordinator_mod = _import_module("coordinator")
+                    drain_notifications = _coordinator_mod.drain_notifications
+                    _active_workers = _coordinator_mod._active_workers
+                    _read_manifest = _coordinator_mod._read_manifest
                     import time as _time
 
                     def _has_running_workers() -> bool:
@@ -478,6 +512,7 @@ def run_once(engine: "QueryEngine", prompt: str) -> None:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+    ensure_using_dirs()
 
     # 构建工作区上下文
     workspace = build_workspace_context()
@@ -493,7 +528,7 @@ def main() -> None:
     perm_ctx = ToolPermissionContext.from_mode(mode)
 
     try:
-        from .query import QueryEngine
+        QueryEngine = _import_module("query").QueryEngine
         engine = QueryEngine(
             model=args.model,
             permission_ctx=perm_ctx,
@@ -505,7 +540,7 @@ def main() -> None:
 
     # 注册 Coordinator 工具（无论是否在 Coordinator 模式，工具都可用）
     try:
-        from .coordinator import register_coordinator_tools
+        register_coordinator_tools = _import_module("coordinator").register_coordinator_tools
         register_coordinator_tools(engine)
     except Exception as e:
         console.print(f"[dim yellow]Coordinator 工具注册失败: {e}[/dim yellow]")
@@ -524,8 +559,11 @@ def main() -> None:
     import atexit as _atexit
     import asyncio as _asyncio
     try:
-        from .mcp.config import ensure_default_config, load_mcp_config
-        from .mcp.client import MCPConnectionManager
+        _mcp_config_mod = _import_module("mcp.config")
+        _mcp_client_mod = _import_module("mcp.client")
+        ensure_default_config = _mcp_config_mod.ensure_default_config
+        load_mcp_config = _mcp_config_mod.load_mcp_config
+        MCPConnectionManager = _mcp_client_mod.MCPConnectionManager
 
         ensure_default_config()
         _mcp_cfg = load_mcp_config()
@@ -540,7 +578,7 @@ def main() -> None:
             _asyncio.run(_connect_mcp_servers())#main.py 的入口是普通同步函数 main()。同步函数里不能直接 await，所以要用 asyncio.run 去执行一个协程。
 
             # 将已连接的 manager 注入 mcp_tool，避免重复初始化
-            from .tools import mcp_tool as _mcp_tool_mod
+            _mcp_tool_mod = _import_module("tools.mcp_tool")
             _mcp_tool_mod._mcp_manager = _mcp_manager
 
             # atexit：shell-agent 退出时终止所有 MCP 子进程（同步直接 kill，避免 asyncio.run 在 atexit 阶段崩溃）
@@ -568,7 +606,7 @@ def main() -> None:
 
     # Coordinator 模式：替换 system prompt
     if args.coordinator:
-        from .coordinator import COORDINATOR_SYSTEM_PROMPT
+        COORDINATOR_SYSTEM_PROMPT = _import_module("coordinator").COORDINATOR_SYSTEM_PROMPT
         engine.system_prompt = COORDINATOR_SYSTEM_PROMPT
         console.print("[bold cyan]🎯 Coordinator 模式已启动[/bold cyan]")
 
@@ -588,7 +626,7 @@ def main() -> None:
     # 后台触发 Dream（对标 claw-code 的自动整合逻辑）
     if not args.no_memory:
         try:
-            from .memory import maybe_dream_in_background
+            maybe_dream_in_background = _import_module("memory").maybe_dream_in_background
             maybe_dream_in_background(engine)
         except Exception:
             pass

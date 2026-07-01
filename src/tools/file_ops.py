@@ -7,11 +7,12 @@ import time
 from pathlib import Path
 
 from . import ToolSpec, register
+from ..paths import FILE_HISTORY_DIR
 
 # ── 文件历史备份（对标 Claude Code utils/fileHistory.ts）─────────
-# 备份目录：~/.shell-agent/file_history/{16位路径哈希}/
+# 备份目录：using/file_history/{16位路径哈希}/
 # 每个文件最多保留 10 份备份，自动淘汰最旧的
-HISTORY_DIR = Path.home() / ".shell-agent" / "file_history"
+HISTORY_DIR = FILE_HISTORY_DIR
 MAX_BACKUPS_PER_FILE = 10
 
 # ── mtime 追踪（对标 Claude Code FileEditTool validateInput）─────

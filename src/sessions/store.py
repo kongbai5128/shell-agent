@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
 
+from ..paths import SESSIONS_DIR
 
 @dataclass
 class StoredSession:
@@ -23,7 +24,7 @@ class StoredSession:
         return self.input_tokens / 1_000_000 * 15 + self.output_tokens / 1_000_000 * 75
 
 
-SESSION_DIR = Path.cwd() / ".shell-agent" / "sessions"
+SESSION_DIR = SESSIONS_DIR
 
 
 def new_session_id() -> str:

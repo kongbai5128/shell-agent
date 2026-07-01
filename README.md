@@ -422,6 +422,21 @@ pytest tests/ -v
 
 ## ⚙️ 配置选项
 
+### 本项目生成目录
+
+项目内运行时数据统一保存在 `using/`：
+
+- `using/article/`：本地论文 PDF/TXT/MD
+- `using/research/`：论文切片、阅读笔记、代码候选、复现计划和 clone 的代码
+- `using/memory/`、`using/sessions/`、`using/skills/`、`using/agents/`、`using/file_history/`：记忆、会话、用户 skill、多 Agent 状态和文件备份
+- `using/todos.json`：todo 工具状态
+
+`.shell-agent/` 仅作为旧版本运行时目录保留在 `.gitignore` 中；当前项目级生成文件不应再写入该目录。
+
+### Research 复现流程
+
+当用户提出“复现 hnsw 代码”这类请求时，优先使用 `research_prepare_reproduction`。流程会先从 `using/article/` 让模型选择最相关论文；没有合适本地论文时再联网搜索并获取论文；随后生成 `using/research/papers/<paper_id>/chunks.jsonl`，在切片和联网结果中查找 Git 仓库地址，找到则 clone 到该论文目录下，找不到则返回 `no_repository_found`。
+
 ### 命令行参数
 
 ```bash
@@ -516,7 +531,7 @@ export DEEPSEEK_API_KEY="your-key"
 3. 在完全访问模式下，危险操作前会询问确认
 
 ### Q: 会话数据存储在哪里？
-**A**: 会话数据保存在 `.shell-agent/sessions/` 目录下，每个会话一个JSON文件。您可以使用 `/save` 保存当前会话，使用 `--resume` 恢复会话。
+**A**: 会话数据保存在 `using/sessions/` 目录下，每个会话一个JSON文件。您可以使用 `/save` 保存当前会话，使用 `--resume` 恢复会话。
 
 ### Q: 如何扩展shell-agent的功能？
 **A**: 您可以：

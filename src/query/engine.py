@@ -264,12 +264,12 @@ class QueryEngine:
                 elif self.permission_ctx.requires_confirm(tool_name) and confirm_callback:
                     confirmed = confirm_callback(tool_name, tool_input)
                     result_content = (
-                        tools.execute(tool_name, tool_input)
+                        tools.execute(tool_name, tool_input, engine=self)
                         if confirmed
                         else f"用户取消了工具 '{tool_name}' 的执行"
                     )
                 else:
-                    result_content = tools.execute(tool_name, tool_input)
+                    result_content = tools.execute(tool_name, tool_input, engine=self)
 
                 # 打印工具执行结果
                 if tool_callback:

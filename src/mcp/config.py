@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from ..paths import MCP_PROJECT_CONFIG
 from .types import (
     MCPServerConfig,
     MCPStdioServerConfig,
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # 配置文件的典型位置
 CONFIG_PATHS = [
-    Path.cwd() / ".shell-agent" / "mcp.json",        # 项目级配置
+    MCP_PROJECT_CONFIG,                              # 项目级配置
     Path.home() / ".shell-agent" / "mcp.json",       # 用户级配置
     Path.cwd() / "mcp.json",                          # 根目录配置
 ]
@@ -108,7 +109,7 @@ def load_mcp_config(config_file: Optional[Path] = None) -> MCPJsonConfig:
     
     查找顺序：
     1. 明确指定的 config_file
-    2. 项目级配置 (.shell-agent/mcp.json)
+    2. 项目级配置 (using/mcp.json)
     3. 用户级配置 (~/.shell-agent/mcp.json)
     4. 根目录配置 (./mcp.json)
     

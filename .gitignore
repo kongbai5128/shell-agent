@@ -42,5 +42,5 @@ dist/
 
 # Legacy py-agent runtime state
 .py-agent/
-.py-agents/
+using/*/*
 .py-agent-todos.json

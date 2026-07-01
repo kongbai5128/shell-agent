@@ -2,7 +2,7 @@
 记忆系统 — 对标 claw-code memdir/ 子系统
 
 三个功能：
-1. MemoryStore     — 读写结构化记忆文件（~/.shell-agent/memories/）
+1. MemoryStore     — 读写结构化记忆文件（using/memory/）
 2. auto_consolidate — 自动整合历史记录（距上次整合超24h且有1+新会话）
 3. Dream           — 四阶段记忆整合子 agent（Orient→Gather→Consolidate→Prune）
 
@@ -31,13 +31,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, TYPE_CHECKING
 
+from ..paths import MEMORY_DIR, MEMORY_INDEX_FILE, SESSIONS_DIR
+
 if TYPE_CHECKING:
     from ..query import QueryEngine
-
-# ── 存储路径 ───────────────────────────────────────────────────
-MEMORY_DIR = Path.cwd() / ".shell-agent" / "memories"
-SESSIONS_DIR = Path.cwd() / ".shell-agent" / "sessions"
-MEMORY_INDEX_FILE = MEMORY_DIR / "_index.json"
 
 # ── 记忆类型（对标 claw-code memdir/memoryTypes.ts）─────────────
 MEMORY_TYPES = ("user", "feedback", "project", "reference")
@@ -194,7 +191,7 @@ def _score_memory_relevance(memory: "Memory", query: str) -> float:
 class MemoryStore:
     """
     记忆读写，对标 claw-code memdir/memdir.ts。
-    每条记忆存为独立的 JSON 文件：~/.shell-agent/memories/<id>.json
+    每条记忆存为独立的 JSON 文件：using/memory/<id>.json
     """
 
     def __init__(self):
