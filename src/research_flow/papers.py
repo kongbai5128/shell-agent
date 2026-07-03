@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
-from typing import Iterable
 
 from ..paths import ARTICLE_DIR, RESEARCH_PAPERS_DIR, ensure_using_dirs
 from .library import ResearchLibrary, paper_id_from_name
 
 
-CHUNK_SIZE = 1800
-CHUNK_OVERLAP = 180
+# 正文只持久化为 extracted.txt；代码仓库 URL 直接从正文中本地提取。
 ARTICLE_EXTENSIONS = (".pdf", ".txt", ".md")
 
 
 def find_local_article(query_or_paper_id: str) -> Path | None:
+    """在 using/article 中查找最匹配用户查询的本地论文文件。"""
     ensure_using_dirs()
     query = query_or_paper_id.lower()
     candidates = [p for p in ARTICLE_DIR.iterdir() if p.is_file() and p.suffix.lower() in ARTICLE_EXTENSIONS]
@@ -32,7 +30,7 @@ def find_local_article(query_or_paper_id: str) -> Path | None:
 
 
 def _extract_pdf_text(path: Path) -> tuple[str, str]:
-    """Best-effort PDF extraction. The original file body was not recovered."""
+    """优先用 pypdf 抽取 PDF 正文，失败后尝试系统 pdftotext。"""
     try:
         from pypdf import PdfReader  # type: ignore
 
@@ -62,54 +60,26 @@ def _extract_pdf_text(path: Path) -> tuple[str, str]:
     except Exception:
         pass
 
-    return (
-        f"[PDF text extraction unavailable for {path.name}. Install pypdf or pdftotext. Last pypdf error: {pypdf_error}]",
-        "unavailable",
+    raise RuntimeError(
+        f"PDF text extraction unavailable for {path.name}. "
+        f"Install pypdf or pdftotext. Last pypdf error: {pypdf_error}"
     )
 
 
 def _extract_article_text(path: Path) -> tuple[str, str]:
+    """返回论文正文文本以及本次抽取使用的方法。"""
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         return _extract_pdf_text(path)
     return path.read_text(encoding="utf-8", errors="replace"), "text"
 
 
-def _chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    text = re.sub(r"\s+", " ", text).strip()
-    if not text:
-        return []
-    chunks: list[str] = []
-    start = 0
-    while start < len(text):
-        end = min(len(text), start + chunk_size)
-        chunks.append(text[start:end].strip())
-        if end == len(text):
-            break
-        start = max(end - overlap, start + 1)
-    return chunks
-
-
-def make_chunks(paper_id: str, text: str) -> list[dict]:
-    return [
-        {"paper_id": paper_id, "chunk_index": idx, "text": chunk}
-        for idx, chunk in enumerate(_chunk_text(text))
-    ]
-
-
-def write_chunks(paper_id: str, text: str, paper_dir: Path | None = None) -> Path:
-    """Deprecated compatibility shim: chunks are no longer written to disk."""
-    paper_dir = paper_dir or (RESEARCH_PAPERS_DIR / paper_id)
-    paper_dir.mkdir(parents=True, exist_ok=True)
-    return paper_dir / "chunks.jsonl"
-
-
-def read_chunks(paper_id: str) -> list[dict]:
+def read_extracted_text(paper_id: str) -> str:
+    """读取已抽取的论文正文；不存在时返回空字符串。"""
     extracted_path = RESEARCH_PAPERS_DIR / paper_id / "extracted.txt"
     if not extracted_path.exists():
-        return []
-    text = extracted_path.read_text(encoding="utf-8", errors="replace")
-    return make_chunks(paper_id, text)
+        return ""
+    return extracted_path.read_text(encoding="utf-8", errors="replace")
 
 
 def ensure_paper_in_article(
@@ -118,6 +88,7 @@ def ensure_paper_in_article(
     extract_text: bool = False,
     library: ResearchLibrary | None = None,
 ) -> dict:
+    """解析本地论文文件，并按需持久化 extracted.txt 正文。"""
     article = find_local_article(query_or_paper_id)
     if article is None:
         return {
@@ -137,17 +108,21 @@ def ensure_paper_in_article(
     }
 
     if extract_text:
-        text, method = _extract_article_text(article)
+        try:
+            text, method = _extract_article_text(article)
+        except Exception as exc:
+            metadata.update({"ok": False, "error": str(exc), "extract_method": "failed"})
+            library.upsert_paper(paper_id, metadata)
+            return metadata
         paper_dir = RESEARCH_PAPERS_DIR / paper_id
         paper_dir.mkdir(parents=True, exist_ok=True)
         extracted_path = paper_dir / "extracted.txt"
         extracted_path.write_text(text, encoding="utf-8", errors="replace")
-        chunks = make_chunks(paper_id, text)
         metadata.update(
             {
                 "extract_method": method,
                 "extracted_path": str(extracted_path),
-                "chunk_count": len(chunks),
+                "text_chars": len(text),
             }
         )
 
@@ -155,15 +130,17 @@ def ensure_paper_in_article(
     return metadata
 
 
-def ensure_paper_chunks(query_or_paper_id: str, *, library: ResearchLibrary | None = None) -> dict:
+def ensure_paper_text(query_or_paper_id: str, *, library: ResearchLibrary | None = None) -> dict:
+    """确保论文正文已抽取到 extracted.txt，并返回正文基础信息。"""
     paper_id = paper_id_from_name(query_or_paper_id)
-    existing = read_chunks(paper_id)
-    if existing:
+    existing_text = read_extracted_text(paper_id)
+    if existing_text:
         return {
             "ok": True,
             "paper_id": paper_id,
             "paper_dir": str(RESEARCH_PAPERS_DIR / paper_id),
-            "chunk_count": len(existing),
+            "extracted_path": str(RESEARCH_PAPERS_DIR / paper_id / "extracted.txt"),
+            "text_chars": len(existing_text),
             "created": False,
         }
 
@@ -174,9 +151,5 @@ def ensure_paper_chunks(query_or_paper_id: str, *, library: ResearchLibrary | No
     return {
         "ok": False,
         "paper_id": paper_id,
-        "error": f"No chunks and no matching article under using/article for: {query_or_paper_id}",
+        "error": f"No extracted text and no matching article under using/article for: {query_or_paper_id}",
     }
-
-
-def chunks_text(chunks: Iterable[dict]) -> str:
-    return "\n".join(str(row.get("text", "")) for row in chunks)

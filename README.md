@@ -427,7 +427,7 @@ pytest tests/ -v
 项目内运行时数据统一保存在 `using/`：
 
 - `using/article/`：本地论文 PDF/TXT/MD
-- `using/research/`：论文切片、阅读笔记、代码候选、复现计划和 clone 的代码
+- `using/research/`：论文正文、复现计划和可选 clone 的代码
 - `using/memory/`、`using/sessions/`、`using/skills/`、`using/agents/`、`using/file_history/`：记忆、会话、用户 skill、多 Agent 状态和文件备份
 - `using/todos.json`：todo 工具状态
 
@@ -435,7 +435,7 @@ pytest tests/ -v
 
 ### Research 复现流程
 
-当用户提出“复现 hnsw 代码”这类请求时，优先使用 `research_prepare_reproduction`。流程会先从 `using/article/` 让模型选择最相关论文；没有合适本地论文时再联网搜索并获取论文；随后生成 `using/research/papers/<paper_id>/chunks.jsonl`，在切片和联网结果中查找 Git 仓库地址，找到则 clone 到该论文目录下，找不到则返回 `no_repository_found`。
+当用户提出“复现 hnsw 代码”这类请求时，优先使用 `research_prepare_reproduction`。流程会先从 `using/article/` 让模型选择最相关论文；没有合适本地论文时再联网搜索并获取论文；随后提取正文到 `using/research/papers/<paper_id>/extracted.txt`，在本地从论文正文中提取 Git 仓库 URL，只把 URL 候选交给模型选择。找到合适仓库则 clone 到该论文目录下，默认创建 conda 环境并安装依赖，并输出 `setup_result`、`run_steps` 与 `reproduction_plan.md`，记录实际执行的安装命令、后续启动命令和验证命令；正文中没有 Git 仓库 URL 时返回 `no_repository_found`。
 
 ### 命令行参数
 

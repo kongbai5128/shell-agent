@@ -73,7 +73,6 @@ _TOOL_ICONS = {
     "list_agents":      "📋",
     "research_resolve_paper": "📚",
     "research_fetch_paper": "📥",
-    "research_create_reading_note": "📝",
     "research_find_code": "🔗",
     "research_reproduction_plan": "🧪",
     "research_prepare_from_paper": "🧬",
@@ -118,7 +117,7 @@ SYSTEM_PROMPT_TEMPLATE = """
 - browser_navigate / browser_click / browser_fill / browser_get_content：浏览器自动化（支持 JS 渲染、登录态、人机验证由用户处理）
 - todo_write / todo_read：任务管理（3+ 步骤的复杂任务必须使用；每项需提供 content 祈使形式 + activeForm 现在进行时；同时只能有一个 in_progress）
 - skill_use / skill_save：加载和保存可复用的专家 prompt（skill）
-- research_resolve_paper / research_fetch_paper / research_create_reading_note / research_find_code / research_reproduction_plan / research_prepare_from_paper / research_prepare_reproduction / research_search_library：文献解析、论文获取/正文提取、阅读笔记、代码候选、复现计划和研究库检索。用户说“复现某篇论文/某算法代码”时，优先调用 research_prepare_reproduction；它会先从 using/article 候选中选择最相关论文，没有则联网搜索，随后切片、查找 GitHub、可选 clone。论文全文和长摘要应进入 using/research，不要直接写入普通长期记忆。
+- research_resolve_paper / research_fetch_paper / research_find_code / research_reproduction_plan / research_prepare_from_paper / research_prepare_reproduction / research_search_library：文献解析、论文获取/正文提取、代码候选、复现计划和研究库检索。用户说“复现某篇论文/某算法代码”时，优先调用 research_prepare_reproduction；它会先从 using/article 候选中选择最相关论文，没有则联网搜索，随后抽取正文到 extracted.txt、从正文中查找 Git 仓库 URL、可选 clone，默认创建 conda 环境并安装依赖，并返回 run_steps 供用户后续自己启动。论文全文和长摘要应进入 using/research，不要直接写入普通长期记忆。
 - spawn_agent / get_agent_result / shutdown_agent / send_message / list_agents：多 Agent 并行编排。当用户明确要求使用 agent/多代理，或任务可拆解为多个高度解耦的子任务时，**必须**使用 spawn_agent 并行派发，不要自己串行执行。Worker 完成后结果会以 <task-notification> XML 自动送达，无需主动调 get_agent_result 等待。
 
 # 任务执行原则

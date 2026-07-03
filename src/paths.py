@@ -20,6 +20,7 @@ DREAM_LOG = MEMORY_DIR / "dream.log"
 
 
 def ensure_using_dirs() -> None:
+    """创建 shell-agent 运行时需要持久化的 using 子目录。"""
     for path in (
         ARTICLE_DIR,
         RESEARCH_PAPERS_DIR,

@@ -2,3 +2,4 @@ openai>=1.30.0
 rich>=13.0.0
 pytest>=8.0.0
 playwright>=1.40.0  # 浏览器自动化（可选），安装后还需运行: playwright install chromium
+pypdf>=4.0.0

@@ -10,3 +10,6 @@ export ANTHROPIC_API_KEY="sk-0515dd6e3bf3430ca7374bb892fd05d1"
 python src/main.py
 
 # 提问eg:帮我给这个项目写一个完整的 README，包括安装步骤、使用方法和工具列表，可以考虑使用todo_write和todo_read以及web_fetch（比如参考：https://github.com/ultraworkers/claw-code）工具
+
+删除这个复现环境：
+conda env remove -n repro-hnsw -y
