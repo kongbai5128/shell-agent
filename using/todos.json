@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "1",
+    "content": "克隆微软 DiskANN 官方仓库",
+    "status": "completed",
+    "activeForm": "正在克隆 DiskANN 仓库"
+  },
+  {
+    "id": "2",
+    "content": "安装 Rust 工具链和依赖",
+    "status": "completed",
+    "activeForm": "正在安装 Rust 工具链"
+  },
+  {
+    "id": "3",
+    "content": "编译 DiskANN 项目",
+    "status": "in_progress",
+    "activeForm": "正在编译 DiskANN 项目"
+  },
+  {
+    "id": "4",
+    "content": "验证编译成功并查看可用命令",
+    "status": "pending",
+    "activeForm": "正在验证编译结果"
+  }
+]

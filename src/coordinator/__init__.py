@@ -10,6 +10,7 @@ from .runtime import (
     send_message,
     shutdown_agent,
     spawn_agent,
+    wait_notifications,
     _active_workers,
     _read_manifest,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "send_message",
     "shutdown_agent",
     "spawn_agent",
+    "wait_notifications",
     "_active_workers",
     "_read_manifest",
 ]

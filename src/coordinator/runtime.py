@@ -363,6 +363,24 @@ def drain_notifications() -> list[str]:
     return notifications
 
 
+def wait_notifications(timeout: float | None = None) -> list[str]:
+    """
+    阻塞等待至少一条 task-notification，收到第一条后再一次性取空队列。
+
+    用于 Coordinator 等待后台 Worker 完成：Worker 调用 queue.put() 后会立即唤醒
+    等待中的主循环，避免 main.py 用 sleep 轮询造成延迟和无效唤醒。
+    timeout 不应长期传 None，否则 Worker 卡住时主循环可能永久阻塞。
+    """
+    try:
+        first = _notification_queue.get(timeout=timeout)
+    except queue.Empty:
+        return []
+
+    notifications = [first]
+    notifications.extend(drain_notifications())
+    return notifications
+
+
 def spawn_agent(inp: dict, engine: "QueryEngine") -> str:
     """
     派发任务给 Worker Agent。

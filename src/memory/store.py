@@ -42,7 +42,7 @@ MemoryType = Literal["user", "feedback", "project", "reference"]
 
 # Dream 触发条件（对标 claw-code 的触发逻辑）
 DREAM_MIN_NEW_SESSIONS = 1       # 至少 1 个新会话
-DREAM_MIN_HOURS_SINCE_LAST = 24  # 距上次整合至少 24 小时
+DREAM_MIN_HOURS_SINCE_LAST = 1  # 距上次整合至少 1 小时
 
 # 对标 claw-code findRelevantMemories.ts → SELECT_MEMORIES_SYSTEM_PROMPT
 _SELECT_MEMORIES_PROMPT = """\

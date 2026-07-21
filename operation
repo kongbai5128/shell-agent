@@ -13,3 +13,5 @@ python src/main.py
 
 删除这个复现环境：
 conda env remove -n repro-hnsw -y
+展示 conda 环境常用命令是：
+conda env list

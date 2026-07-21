@@ -1,7 +1,9 @@
 # Reference and scratch workspaces
+.gitignore
 ref/
 work_space/
 errors/
+面试/
 
 # Editor settings
 .vscode/

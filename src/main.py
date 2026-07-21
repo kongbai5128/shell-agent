@@ -450,9 +450,9 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
                 try:
                     _coordinator_mod = _import_module("coordinator")
                     drain_notifications = _coordinator_mod.drain_notifications
+                    wait_notifications = _coordinator_mod.wait_notifications
                     _active_workers = _coordinator_mod._active_workers
                     _read_manifest = _coordinator_mod._read_manifest
-                    import time as _time
 
                     def _has_running_workers() -> bool:
                         for wid, w in list(_active_workers.items()):
@@ -463,7 +463,13 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
 
                     # 持续消费通知，直到没有活跃 Worker 也没有待处理通知
                     while True:
-                        notifications = drain_notifications()
+                        if _has_running_workers():
+                            # 阻塞等待 Worker 完成通知；超时后醒来检查 manifest，避免 Worker 卡死时永久挂住
+                            notifications = wait_notifications(timeout=300)
+                        else:
+                            # 没有运行中的 Worker 时，只清理队列中可能残留的通知，不阻塞当前用户输入流程
+                            notifications = drain_notifications()
+
                         if notifications:
                             for notif in notifications:
                                 console.print(Rule("[dim yellow]  📨 Worker 通知已送达[/dim yellow]", style="dim yellow"))
@@ -484,8 +490,8 @@ def run_repl(engine: "QueryEngine", use_memory: bool = True, base_system_prompt:
                                 except Exception as e:
                                     console.print(f"[red]处理通知时出错: {e}[/red]")
                         elif _has_running_workers():
-                            # 还有活跃 Worker，短暂等待再检查
-                            _time.sleep(0.5)
+                            # 阻塞等待超时但 Worker 仍未结束，继续下一轮等待
+                            continue
                         else:
                             break
                 except ImportError:
